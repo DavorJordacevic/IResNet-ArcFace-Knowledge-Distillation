@@ -1,0 +1,7 @@
+# Weights
+weights/*
+
+# Log/OS Files
+*.log
+
+ArcFace*
