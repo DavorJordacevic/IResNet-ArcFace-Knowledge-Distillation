@@ -14,7 +14,7 @@ from backbones import get_model
 
 
 net = get_model('r18', fp16=False).to('cuda:0')
-net.load_state_dict(torch.load('ArcfaceQPR18.pth'))
+net.load_state_dict(torch.load('weights/r18/40001backbone.pth'))
 net.eval()
 net.train(False)
 

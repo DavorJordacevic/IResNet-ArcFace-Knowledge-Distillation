@@ -156,19 +156,20 @@ def main(args):
     loss2 = AverageMeter()
     global_step = configKD.cfg.global_step
 
+    callback_verification(global_step, backbone_student)
+    
     for epoch in range(start_epoch, configKD.cfg.num_epoch):
         print(f'Epoch: {epoch}')
         train_sampler.set_epoch(epoch)
-        for step, (masked_img, img, label) in enumerate(train_loader):
+        for step, (_, img, label) in enumerate(train_loader):
             global_step += 1
             img = img.cuda(local_rank, non_blocking=True)
-            masked_img = masked_img.cuda(local_rank, non_blocking=True)
 
             label = label.cuda(local_rank, non_blocking=True)
 
             with torch.no_grad():
                 features_teacher = F.normalize(backbone_teacher(img))
-            features_student = F.normalize(backbone_student(masked_img))
+            features_student = F.normalize(backbone_student(img))
 
             thetas = header(features_student, label)
             loss_v1 = criterion(thetas, label)
@@ -191,6 +192,9 @@ def main(args):
             callback_logging(global_step, loss, loss1, loss2, epoch)
             callback_verification(global_step, backbone_student)
 
+            if step == 40000:
+                callback_checkpoint(global_step, backbone_student, header)
+        
         scheduler_backbone_student.step()
         scheduler_header.step()
 
