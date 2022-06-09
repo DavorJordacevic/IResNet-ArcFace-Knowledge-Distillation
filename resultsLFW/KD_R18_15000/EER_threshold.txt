@@ -1,3 +1,0 @@
-EER: 0.11433333333333333
-Accuracy based on EER (acc = 1-EER) : 0.8856666666666667
-threshold: 0.55

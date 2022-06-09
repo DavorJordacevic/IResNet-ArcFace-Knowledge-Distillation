@@ -1,2 +1,0 @@
-Max accuracy [calculated as (TP + TN) / (TP + TN + FP + FN)] : 0.8161666666666667
-Threshold that gives max accuracy : 0.55
