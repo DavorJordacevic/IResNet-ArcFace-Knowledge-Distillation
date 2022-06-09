@@ -1,5 +1,5 @@
 #!/bin/bash
-
+echo "Benchmark started..."
 ./start_distance_calculation.sh
 ./start_error_rates_calculation.sh
 ./start_EER.sh
