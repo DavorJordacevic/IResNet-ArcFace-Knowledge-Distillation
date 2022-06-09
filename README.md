@@ -3,8 +3,8 @@
 ## Requirements
 
 - `pip install -r requirements.txt`.
-- Download the training dataset from [MS1M-ArcFace (85K ids/5.8M images)](https://drive.google.com/file/d/1SXS4-Am3bsKSK615qbYdbA_FMVh3sAvR/view)
-- Download the verification dataset and labels from [LFW](http://vis-www.cs.umass.edu/lfw/)
+- Download the training dataset from [MS1M-ArcFace (85K ids/5.8M images)](https://drive.google.com/file/d/1SXS4-Am3bsKSK615qbYdbA_FMVh3sAvR/view).
+- Download the verification dataset and labels from [LFW](http://vis-www.cs.umass.edu/lfw/).
 
 ## How to Train
 
