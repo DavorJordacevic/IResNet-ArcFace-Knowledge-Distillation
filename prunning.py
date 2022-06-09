@@ -18,14 +18,12 @@ def prune_model_l1_unstructured(model, layer_type, proportion):
             prune.remove(module, 'weight')
     return model
 
-
 def prune_model_ln_structured(model, layer_type, proportion):
     for module in model.modules():
         if isinstance(module, layer_type):
             prune.ln_structured(module, 'weight', proportion, n=1, dim=1)
             prune.remove(module, 'weight')
     return model
-
 
 def prune_model_global_unstructured(model, layer_type, proportion):
     module_tups = []
@@ -40,7 +38,6 @@ def prune_model_global_unstructured(model, layer_type, proportion):
     for module, _ in module_tups:
         prune.remove(module, 'weight')
     return model
-
 
 @torch.no_grad()
 def convert(weight, name, layer_type, proportion):
