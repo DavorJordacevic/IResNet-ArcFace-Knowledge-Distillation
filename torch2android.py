@@ -25,7 +25,6 @@ def convert(weight, name):
     traced_script_module = torch.jit.trace(net, x)
     traced_script_module_optimized = optimize_for_mobile(traced_script_module)
     traced_script_module_optimized._save_for_lite_interpreter(file_name)
-    #_backport_for_mobile(f_input=file_name, f_output=file_name, to_version=3)
 
 
 if __name__ == "__main__":

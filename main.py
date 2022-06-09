@@ -337,20 +337,14 @@ def main():
     parser.add_argument('--dataset_path', type=str, required=False, help='path to image dataset')
     parser.add_argument('--pairs_format_type', type=str, default='lfw', required=False, help='Format in which pairs file is organized. Options: lfw, calfw')
     parser.add_argument('--pairs_file_path', type=str, required=False, help='File with positive and negative pairs of people for testing')
-    
     parser.add_argument('--find_error_rates', default=False, action='store_true', help='flag to indicate calculating error rates per thresholds in [0,1]')
     parser.add_argument('--distances_file_path', type=str, required=False, help='path to file that contains distances')
-
     parser.add_argument('--fixed_distance_threshold', default=False, action='store_true', help='flag to indicate calculation of metrics based on fixed distance threshold')
     parser.add_argument('--distance_threshold', type=float, required=False, help='Distance threshold for ArcFace')
-
     parser.add_argument('--find_EER', default=False, action='store_true', help='flag to indicate searching for threshold that gives EER')
     parser.add_argument('--error_rates_file_path', type=str, required=False, help='path to json file that contains error rates')
-
     parser.add_argument('--plot_accuracy', default=False, action='store_true', help='flag to indicate plotting accuracy and searching for threshold that gives best accuracy')
-
     parser.add_argument('--results_dir', type=str, required=True, help='path to directory in which results will be (or are) saved')
-
     args = parser.parse_args()
 
     if args.calculate_distances:

@@ -1,7 +1,11 @@
 # Weights
 weights/*
+
+# Cache
 *__pycache__
+
 # Log/OS Files
 *.log
 
+# Models
 ArcFace*

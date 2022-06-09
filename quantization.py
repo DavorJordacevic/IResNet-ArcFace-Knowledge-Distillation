@@ -7,7 +7,8 @@ import argparse
 import numpy as np
 from backbones import get_model
 from torch.utils.mobile_optimizer import optimize_for_mobile
-from torch.quantization.observer import MinMaxObserver, MovingAverageMinMaxObserver, HistogramObserver, MovingAveragePerChannelMinMaxObserver
+from torch.quantization.observer import MinMaxObserver, MovingAverageMinMaxObserver
+from torch.quantization.observer import HistogramObserver, MovingAveragePerChannelMinMaxObserver
 
 @torch.no_grad()
 def convert(weight, name):
@@ -35,12 +36,11 @@ def convert(weight, name):
     traced_script_module_optimized = optimize_for_mobile(traced_script_module)
     traced_script_module_optimized._save_for_lite_interpreter("ArcfaceQuant" + name.upper() + ".ptl")
 
-    # Export the model
-    torch.onnx.export(model_to_quantize, # model being run
-        x,                         # model input (or a tuple for multiple inputs)
+    torch.onnx.export(model_to_quantize,           # model being run
+        x,                                         # model input (or a tuple for multiple inputs)
         "ArcfaceQuant" + name.upper() + ".onnx",   # where to save the model (can be a file or file-like object)
-        export_params=True,        # store the trained parameter weights inside the model file
-        opset_version=10,          # the ONNX version to export the model to
+        export_params=True,                        # store the trained parameter weights inside the model file
+        opset_version=10,                          # the ONNX version to export the model to
         do_constant_folding=True)
 
 
