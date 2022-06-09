@@ -9,8 +9,7 @@ from backbones import get_model
 @torch.no_grad()
 def inference(weight, name):
     img = cv2.imread("image.jpg")
-    #img = cv2.resize(img, (112, 112))
-
+    img = cv2.resize(img, (112, 112))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = np.transpose(img, (2, 0, 1))
     img = torch.from_numpy(img).unsqueeze(0).float()
@@ -19,11 +18,8 @@ def inference(weight, name):
     net.load_state_dict(torch.load(weight))
     net.eval()
 
-    #start = time.time()
     encoding = net(img).numpy()
-    #end = time.time()
-    print(encoding)
-    #print(f'Time: {round((end-start)*1000, 2)}ms.')
+    print(f'Done.')
 
 
 if __name__ == "__main__":

@@ -1,16 +1,15 @@
 import os
 import cv2
 import csv
+import time
 import json
+import torch
 import argparse
 import numpy as np
 from glob import glob
-from matplotlib import pyplot as plt
-import time
-import torch
-import torchvision.transforms as transforms
-
 from backbones import get_model
+from matplotlib import pyplot as plt
+import torchvision.transforms as transforms
 
 
 net = get_model('r18', fp16=False).to('cuda:0')
@@ -20,15 +19,9 @@ net.train(False)
 
 
 def to_numpy(tensor):
-    """
-    Returns numpy array from torch tensor.
-    :param tensor: Torch tensor
-    :return: Returns numpy array from torch tensor.
-    """
     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
 def l2_norm(x, axis=1):
-    """l2 norm"""
     norm = np.linalg.norm(x, axis=axis, keepdims=True)
     output = x / norm
 
@@ -56,23 +49,10 @@ def cosine_distance(a, b):
 
 
 def calculate_cosine_distances(dataset_path, pairs_format_type, pairs_file_path, results_dir):
-
-    """
-    Calculats cosine distances between defined positive and negative pairs of images. 
-    Calculated distances are written to distances.csv file
-
-    Parameters:
-        dataset_path          -  path image dataset
-        pairs_file_path       -  path to file in which are defined pairs of people 
-        results_dir           -  path of directory in which resulted distances wll be saved
-    """
-
-    
-    pairs = [] # list of positive and negative pairs of images to be compaired. One pair: [person1-ImgN, person2-ImgN]
+    pairs = []
     with open(pairs_file_path, 'r') as f:
         data = f.read().split('\n')[:-1]
         data = [record.replace('\t', ' ') for record in data]
-    print(data)
 
     for record in data:
         fields = record.split(' ')
@@ -80,8 +60,6 @@ def calculate_cosine_distances(dataset_path, pairs_format_type, pairs_file_path,
             pairs.append([fields[0]+'&'+fields[1], fields[0]+'&'+fields[2]])
         if len(fields) == 4:
             pairs.append([fields[0]+'&'+fields[1], fields[2]+'&'+fields[3]])
-
-    print(pairs)
 
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
@@ -91,23 +69,20 @@ def calculate_cosine_distances(dataset_path, pairs_format_type, pairs_file_path,
         header = ['person1&ImgN', 'person2&ImgN', 'distance', 'Retina on person1', 'Retina on person2', 'LightCNN on person1', 'LightCNN on person2']
         writer = csv.DictWriter(f, fieldnames=header)
         writer.writeheader()
-    print('Writing results to ', distances_file_path)
 
 
-    for pair in pairs:
-
+    for num, pair in enumerate(pairs):
+        print(f'Pair: {num}')
         person1_imgNum = pair[0].split('&')
         person1_images = np.sort(glob(dataset_path + os.path.sep + person1_imgNum[0] + '/*'))
 
         img_path_person1 = person1_images[int(person1_imgNum[1]) - 1]
-        print(img_path_person1)
         img_person1 = cv2.imread(img_path_person1)
 
         person2_imgNum = pair[1].split('&')
         person2_images = np.sort(glob(dataset_path + os.path.sep + person2_imgNum[0] + '/*'))
 
         img_path_person2 = person2_images[int(person2_imgNum[1]) - 1]
-        print(img_path_person2)
         img_person2 = cv2.imread(img_path_person2)
 
         time.sleep(0.01)
@@ -125,45 +100,32 @@ def calculate_cosine_distances(dataset_path, pairs_format_type, pairs_file_path,
             data = [pair[0], pair[1], distance]
             writer.writerow(data)
 
-        print('Distances are written to ', distances_file_path)
-
-
 
 def calculate_metrics(distances_file_path, distance_threshold):
-    print('Calculating metrics...')
-    #print(distances_file_path)
-
     TP, FP, TN, FN = 0, 0, 0, 0
     data = []
     n_failed_comparisons = 0
 
     with open(distances_file_path, 'r') as f:
-        #header = ['person1 (on DL card)', 'person2 (on camera images)', 'distances']
-        reader = csv.DictReader(f, fieldnames=None)  # fieldnames=None to skip the header
+        reader = csv.DictReader(f, fieldnames=None)
         for row in reader:
-            #print(row)
 
             if not row['distance'] == '[]':
 
-                distance = float(row['distance'][1:-1])
-                #print("distance", distance)
-                 
+                distance = float(row['distance'][1:-1])                 
                 result = distance < distance_threshold
-                #print("result", result)
                
                 person1 = row['person1&ImgN'].split('&')[0]
                 person2 = row['person2&ImgN'].split('&')[0]
-                #print(person1, ' ', person2)
-                #print("-------------")
 
                 data.append([person1, person2, person1 == person2, bool(result)])
 
-                if person1 == person2:       # positive pair (same person)
+                if person1 == person2:
                     if result:
                         TP += 1
                     else:
                         FN += 1
-                elif person1 != person2:     # negative pair (different people)
+                elif person1 != person2:
                     if result:
                         FP += 1
                     else:
@@ -187,45 +149,26 @@ def calculate_metrics(distances_file_path, distance_threshold):
         if (TP + FN) > 0:
             FNMR = FN / (TP + FN) 
 
-        """
-        print('FP ', FP)
-        print('FN ', FN)
-
-        print('FMR ', FMR)
-        print('FNMR ', FNMR)
-        """
-
         TAR, TRR = None, None
         if (TP + FN) > 0:
             TAR = TP / (TP + FN)
         if (FP + TN) > 0:
             TRR = TN / (FP + TN)
 
-        # Another way:
-        #TAR = 1 - FNMR
-        #TRR = 1 - FMR
-
         EER = None
         accuracy_based_on_eer = None
 
         if round(FMR,2) == round(FNMR,2) and FMR != 0.0:
             EER = FMR
-            #print('EER found: ', EER)
             accuracy_based_on_eer = 1.0 - EER
 
-        #return accuracy, FMR, FNMR, TAR, TRR, EER, accuracy_based_on_eer, data, n_failed_comparisons
         return TP, FP, TN, FN, accuracy, precision, recall, FMR, FNMR, TAR, TRR, EER, accuracy_based_on_eer, data, n_failed_comparisons
 
 
 
 def results_for_fixed_threshold(distances_file_path, distance_threshold, results_dir):
-    """
-    Calculates metrics based on previously calculated distances between pairs and given distance threshold.
-    """
-
     TP, FP, TN, FN, accuracy, precision, recall, FMR, FNMR, TAR, TRR, EER, accuracy_based_on_eer, data, n_failed_comparisons = calculate_metrics(distances_file_path, distance_threshold)
     
-    #save_dir = 'face_verification_results'
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
     results_file_name = results_dir + os.path.sep + 'results_distThr=' + str(distance_threshold)
@@ -266,10 +209,6 @@ def results_for_fixed_threshold(distances_file_path, distance_threshold, results
 
 
 def find_error_rates_per_threshold(distances_file_path, results_dir):
-    """
-    Calculates error rates (FMR and FNMR) for multiple threshold values (which are in interval [0,1] with step 0.05).
-    Resulted FMRs and FNMRs are written to json file and can be later used for finding EER.
-    """
 
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
@@ -277,8 +216,6 @@ def find_error_rates_per_threshold(distances_file_path, results_dir):
     error_rates = []
 
     thresholds = np.arange(0, 1, 0.05)
-    #print(thresholds)
-
     for thr in thresholds:
         print('Distance threshold: ', thr)
         TP, FP, TN, FN, accuracy, precision, recall, FMR, FNMR, TAR, TRR, EER, accuracy_based_on_eer, data, n_failed_comparisons = calculate_metrics(distances_file_path, thr)
@@ -286,9 +223,6 @@ def find_error_rates_per_threshold(distances_file_path, results_dir):
         error_rates.append({'distance_threshold': thr, 'accuracy':accuracy, 'FMR': FMR, 'FNMR':FNMR})
 
         if EER is not None:
-            print('Found EER.')
-            print(EER, accuracy_based_on_eer)
-
             with open(results_dir + os.path.sep + 'EER_info.txt', 'w') as f:
                 f.write('Cosine distance threshold: ' + str(thr) + '\n')
                 f.write('EER: ' + str(EER) + '\n')
@@ -309,7 +243,6 @@ def find_error_rates_per_threshold(distances_file_path, results_dir):
                 f.write('TAR: ' + str(TAR) + '\n')
                 f.write('TRR: ' + str(TRR) + '\n')
                 
-    #print(error_rates)
     with open(results_dir + os.path.sep + 'error_rates.json', 'w') as outfile:
         json.dump(error_rates, outfile)
 
@@ -333,9 +266,6 @@ def find_EER(error_rates_file_path, results_dir):
     thresholds, FMRs, FNMRs = np.array(thresholds), np.array(FMRs), np.array(FNMRs) 
 
     idx = np.argwhere(np.diff(np.sign(FMRs - FNMRs))).flatten()
-    #idx = np.argwhere(np.sign(FMRs - FNMRs) == 0).flatten()
-    #idx = np.argwhere(np.round(np.abs(FMRs - FNMRs), 1) == 0).flatten()
-    print('EER idx', idx)
 
     plt.figure(figsize=(120,110))
     plt.plot(thresholds, FMRs, label='FMR')
@@ -351,7 +281,6 @@ def find_EER(error_rates_file_path, results_dir):
     plt.plot(thresholds[idx], FMRs[idx], 'ro')
 
     plt.savefig(results_dir + os.path.sep + 'error_rates.png')
-    #plt.show()
 
     EER = FMRs[idx[0]]
     thr = thresholds[idx[0]]
@@ -381,7 +310,6 @@ def plot_accuracy(error_rates_file_path, results_dir):
     thresholds, accuracies = np.array(thresholds), np.array(accuracies)
 
     maxAccIdx = np.argmax(accuracies)
-    print('maxAccIdx', maxAccIdx)
     maxAcc = accuracies[maxAccIdx]
     maxAccThreshold = thresholds[maxAccIdx]
 
@@ -426,18 +354,23 @@ def main():
     args = parser.parse_args()
 
     if args.calculate_distances:
+        print(f'Calculating cosine distances')
         calculate_cosine_distances(args.dataset_path, args.pairs_format_type, args.pairs_file_path, args.results_dir)
 
     if args.find_error_rates:
+        print(f'Calculating error rates per threshold')
         find_error_rates_per_threshold(args.distances_file_path, args.results_dir)
 
     if args.fixed_distance_threshold:
+        print(f'Calculating the fixed error rate')
         results_for_fixed_threshold(args.distances_file_path, args.distance_threshold, args.results_dir)
 
     if args.find_EER:
+        print(f'Calculating the equal error rate')
         find_EER(args.error_rates_file_path, args.results_dir)
 
     if args.plot_accuracy:
+        print(f'Calculating the accuracy')
         plot_accuracy(args.error_rates_file_path, args.results_dir)
 
 if __name__ == "__main__":
