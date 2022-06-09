@@ -1,6 +1,6 @@
 # Weights
 weights/*
-
+*__pycache__
 # Log/OS Files
 *.log
 

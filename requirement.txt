@@ -1,5 +1,13 @@
+onnx
 tensorboard
 easydict
-mxnet
-onnx
 sklearn
+matplotlib
+pandas
+scikit-image
+menpo
+prettytable
+mxnet
+pytorch_summary
+cv2
+torch
