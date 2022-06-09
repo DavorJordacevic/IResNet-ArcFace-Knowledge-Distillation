@@ -6,10 +6,13 @@
 - Download the training dataset from [MS1M-ArcFace (85K ids/5.8M images)](https://drive.google.com/file/d/1SXS4-Am3bsKSK615qbYdbA_FMVh3sAvR/view).
 - Download the verification dataset and labels from [LFW](http://vis-www.cs.umass.edu/lfw/).
 
-## How to Train
+## Training
 
 To train a model, run `/KD_Iresnet/train_kd.sh` with the correct address.
 
+## Testing
+
+To test a model, run `mainOne.sh` with the correct model path.
 
 ## Credits
 
