@@ -1,26 +1,26 @@
-import argparse
-import logging
 import os
 import time
 import torch
-import torch.distributed as dist
+import logging
+import argparse
+from utils import losses
+from config import configKD
 import torch.nn.functional as F
-from torch.nn.parallel.distributed import DistributedDataParallel
+import torch.distributed as dist
 import torch.utils.data.distributed
 from torch.nn.utils import clip_grad_norm_
 from torch.nn import CrossEntropyLoss, MSELoss
-
-from utils import losses
-from config import configKD
-from utils.dataset import MXFaceDataset, DataLoaderX
-from utils.utils_callbacks import CallBackVerification, CallBackLoggingKD, CallBackModelCheckpointKD
-from utils.utils_logging import AverageMeter, init_logging
-
 from backbones.iresnet import iresnet18, iresnet34
+from utils.dataset import MXFaceDataset, DataLoaderX
+from utils.utils_logging import AverageMeter, init_logging
+from torch.nn.parallel.distributed import DistributedDataParallel
+from utils.utils_callbacks import CallBackVerification, CallBackLoggingKD, CallBackModelCheckpointKD
 
 torch.backends.cudnn.benchmark = True
 
+
 def main(args):
+    # NCCL Training on multiple machines and GPUs
     dist.init_process_group(rank=args.local_rank, backend='nccl', init_method='env://', world_size=1)
     local_rank = args.local_rank
     torch.cuda.set_device(local_rank)
@@ -50,9 +50,9 @@ def main(args):
         backbone_teacher.load_state_dict(torch.load(backbone_teacher_pth, map_location=torch.device(local_rank)))
 
         if rank == 0:
-            logging.info("backbone teacher loaded successfully!")
+            logging.info("Backbone teacher loaded successfully!")
     except (FileNotFoundError, KeyError, IndexError, RuntimeError):
-        logging.info("load teacher backbone init, failed!")
+        logging.info("Load teacher backbone init, failed!")
 
     # load student model
     backbone_student = iresnet18(num_features=configKD.cfg.embedding_size).to(local_rank)
@@ -63,9 +63,9 @@ def main(args):
             backbone_student.load_state_dict(torch.load(backbone_student_pth, map_location=torch.device(local_rank)))
 
             if rank == 0:
-                logging.info("backbone student loaded successfully!")
+                logging.info("Backbone student loaded successfully!")
         except (FileNotFoundError, KeyError, IndexError, RuntimeError):
-            logging.info("load student backbone init, failed!")
+            logging.info("Load student backbone init, failed!")
 
     if args.resume:
         try:
@@ -73,12 +73,9 @@ def main(args):
             backbone_student.load_state_dict(torch.load(backbone_student_pth, map_location=torch.device(local_rank)))
 
             if rank == 0:
-                logging.info("backbone student resume loaded successfully!")
+                logging.info("Backbone student resume loaded successfully!")
         except (FileNotFoundError, KeyError, IndexError, RuntimeError):
-            logging.info("load student backbone resume init, failed!")
-
-    #for ps in backbone_teacher.parameters():
-    #    dist.broadcast(ps, 0)
+            logging.info("Load student backbone resume init, failed!")
 
     for ps in backbone_student.parameters():
         dist.broadcast(ps, 0)
@@ -100,9 +97,9 @@ def main(args):
             header.load_state_dict(torch.load(header_pth, map_location=torch.device(local_rank)))
 
             if rank == 0:
-                logging.info("header resume loaded successfully!")
+                logging.info("Header resume loaded successfully!")
         except (FileNotFoundError, KeyError, IndexError, RuntimeError):
-            logging.info("header resume init, failed!")
+            logging.info("Header resume init, failed!")
     
     header = DistributedDataParallel(
         module=header, broadcast_buffers=False, device_ids=[local_rank])
@@ -123,7 +120,6 @@ def main(args):
         optimizer=opt_header, lr_lambda=configKD.cfg.lr_func)        
 
     criterion = CrossEntropyLoss()
-    
     criterion2 = MSELoss()
 
     start_epoch = 0
@@ -133,18 +129,17 @@ def main(args):
     if args.resume:
         rem_steps = (total_step - configKD.cfg.global_step)
         cur_epoch = configKD.cfg.num_epoch - int(configKD.cfg.num_epoch / total_step * rem_steps)
-        logging.info("resume from estimated epoch {}".format(cur_epoch))
-        logging.info("remaining steps {}".format(rem_steps))
+        logging.info("Resume from estimated epoch {}".format(cur_epoch))
+        logging.info("Remaining steps {}".format(rem_steps))
         
         start_epoch = cur_epoch
         scheduler_backbone_student.last_epoch = cur_epoch
         scheduler_header.last_epoch = cur_epoch
 
-        # --------- this could be solved more elegant ----------------
         opt_backbone_student.param_groups[0]['lr'] = scheduler_backbone_student.get_lr()[0]
         opt_header.param_groups[0]['lr'] = scheduler_header.get_lr()[0]
 
-        print("last learning rate: {}".format(scheduler_header.get_lr()))
+        print("Last learning rate: {}".format(scheduler_header.get_lr()))
         # ------------------------------------------------------------
 
     callback_verification = CallBackVerification(configKD.cfg.eval_step, rank, configKD.cfg.val_targets, configKD.cfg.rec) # 2000
@@ -177,6 +172,9 @@ def main(args):
             loss_v = loss_v1 + loss_v2
             loss_v.backward()
 
+            # Clips gradient norm of an iterable of parameters.
+            # The norm is computed over all gradients together,
+            # as if they were concatenated into a single vector. Gradients are modified in-place.
             clip_grad_norm_(backbone_student.parameters(), max_norm=5, norm_type=2)
 
             opt_backbone_student.step()
@@ -206,10 +204,10 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training with template knowledge distillation')
     parser.add_argument('--local_rank', type=int, default=0, help='local_rank')
-    parser.add_argument('--network_student', type=str, default="iresnet18", help="backbone of student network")
-    parser.add_argument('--network_teacher', type=str, default="iresnet34", help="backbone of teacher network")
-    parser.add_argument('--loss', type=str, default="ArcFace", help="loss function")
-    parser.add_argument('--pretrained_student', type=int, default=1, help="use pretrained student model for KD")
-    parser.add_argument('--resume', type=int, default=0, help="resume training")
+    parser.add_argument('--network_student', type=str, default="iresnet18", help="Backbone of student network")
+    parser.add_argument('--network_teacher', type=str, default="iresnet34", help="Backbone of teacher network")
+    parser.add_argument('--loss', type=str, default="ArcFace", help="Loss function")
+    parser.add_argument('--pretrained_student', type=int, default=1, help="Use pretrained student model for KD")
+    parser.add_argument('--resume', type=int, default=0, help="Resume training")
     args_ = parser.parse_args()
     main(args_)
