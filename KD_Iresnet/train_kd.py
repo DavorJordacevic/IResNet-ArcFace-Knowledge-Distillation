@@ -21,6 +21,7 @@ torch.backends.cudnn.benchmark = True
 
 def main(args):
     # NCCL Training on multiple machines and GPUs
+    # world_size is the number of processes in this group , which is also the number of processes participating in the job
     dist.init_process_group(rank=args.local_rank, backend='nccl', init_method='env://', world_size=1)
     local_rank = args.local_rank
     torch.cuda.set_device(local_rank)
@@ -29,8 +30,6 @@ def main(args):
 
     if not os.path.exists(configKD.cfg.output) and rank == 0:
         os.makedirs(configKD.cfg.output)
-    else:
-        time.sleep(2)
 
     log_root = logging.getLogger()
     init_logging(log_root, rank, configKD.cfg.output)
@@ -80,12 +79,10 @@ def main(args):
     for ps in backbone_student.parameters():
         dist.broadcast(ps, 0)
 
-    backbone_teacher = DistributedDataParallel(
-        module=backbone_teacher, broadcast_buffers=False, device_ids=[local_rank])
+    backbone_teacher = DistributedDataParallel(module=backbone_teacher, broadcast_buffers=False, device_ids=[local_rank])
     backbone_teacher.eval()
 
-    backbone_student = DistributedDataParallel(
-        module=backbone_student, broadcast_buffers=False, device_ids=[local_rank])
+    backbone_student = DistributedDataParallel(module=backbone_student, broadcast_buffers=False, device_ids=[local_rank])
     backbone_student.train()
 
     # get header
@@ -203,7 +200,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training with template knowledge distillation')
-    parser.add_argument('--local_rank', type=int, default=0, help='local_rank')
+    parser.add_argument('--local_rank', type=int, default=0, help='The rank of the process on the local machine')
     parser.add_argument('--network_student', type=str, default="iresnet18", help="Backbone of student network")
     parser.add_argument('--network_teacher', type=str, default="iresnet34", help="Backbone of teacher network")
     parser.add_argument('--loss', type=str, default="ArcFace", help="Loss function")
