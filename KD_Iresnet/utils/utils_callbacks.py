@@ -1,10 +1,8 @@
-import logging
 import os
 import time
-from typing import List
-
 import torch
-
+import logging
+from typing import List
 from eval import verification
 from utils.utils_logging import AverageMeter
 
@@ -18,7 +16,6 @@ class CallBackVerification(object):
         self.ver_list: List[object] = []
         self.ver_name_list: List[str] = []
         if self.rank == 0:
-            #self.init_dataset(val_targets=val_targets, data_dir=rec_prefix, image_size=image_size, both_masked=both_masked, load_color=load_color)
             self.init_dataset(val_targets=val_targets, data_dir=rec_prefix, image_size=image_size, both_masked=both_masked, load_color=load_color)
 
     def ver_test(self, backbone: torch.nn.Module, global_step: int):
@@ -77,7 +74,6 @@ class CallBackLogging(object):
                     self.writer.add_scalar('time_for_end', time_for_end, global_step)
                     self.writer.add_scalar('loss', loss.avg, global_step)
 
-
                 msg = "Speed %.2f samples/sec   Loss %.4f   Epoch: %d   Global Step: %d   Required: %1.f hours" % (
                         speed_total, loss.avg, epoch, global_step, time_for_end
                     )
@@ -87,6 +83,7 @@ class CallBackLogging(object):
             else:
                 self.init = True
                 self.tic = time.time()
+
 
 class CallBackLoggingKD(object):
     def __init__(self, frequent, rank, total_step, batch_size, world_size, writer=None, resume=0, rem_total_steps=None):
@@ -113,7 +110,6 @@ class CallBackLoggingKD(object):
                     speed_total = float('inf')
 
                 time_now = (time.time() - self.time_start) / 3600
-                # TODO: resume is not working
                 if self.resume:
                     time_total = time_now / ((global_step + 1) / self.rem_total_steps)
                 else:
