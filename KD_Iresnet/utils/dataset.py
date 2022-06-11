@@ -1,16 +1,16 @@
-import numbers
 import os
-import queue as Queue
-import threading
-import random
-
 import cv2
-
+import torch
+import random
+import numbers
+import threading
 import mxnet as mx
 import numpy as np
-import torch
-from torch.utils.data import DataLoader, Dataset
+import queue as Queue
 from torchvision import transforms
+from torch.utils.data import DataLoader, Dataset
+
+
 
 class BackgroundGenerator(threading.Thread):
     def __init__(self, generator, local_rank, max_prefetch=6):
