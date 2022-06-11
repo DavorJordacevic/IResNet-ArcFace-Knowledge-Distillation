@@ -1,18 +1,16 @@
-import torch
-from torch import nn
-from math import pi
 
 import math
-
+import torch
 import numpy as np
+from math import pi
+from torch import nn
+
 
 def l2_norm(input, axis = 1):
     norm = torch.norm(input, 2, axis, True)
     output = torch.div(input, norm)
 
     return output
-
-
 
 class ArcFace(nn.Module):
     r"""Implement of ArcFace (https://arxiv.org/pdf/1801.07698v1.pdf):
@@ -32,7 +30,6 @@ class ArcFace(nn.Module):
         self.m = m
         
         self.kernel = nn.Parameter(torch.FloatTensor(in_features, out_features))
-        #nn.init.xavier_uniform_(self.kernel)
         nn.init.normal_(self.kernel, std=0.01)
 
         self.easy_margin = easy_margin
@@ -51,7 +48,7 @@ class ArcFace(nn.Module):
         target_logit = cos_theta[torch.arange(0, embbedings.size(0)), label].view(-1, 1)
 
         sin_theta = torch.sqrt(1.0 - torch.pow(target_logit, 2))
-        cos_theta_m = target_logit * self.cos_m - sin_theta * self.sin_m #cos(target+margin)
+        cos_theta_m = target_logit * self.cos_m - sin_theta * self.sin_m
         if self.easy_margin:
             final_target_logit = torch.where(target_logit > 0, cos_theta_m, target_logit)
         else:
@@ -59,4 +56,4 @@ class ArcFace(nn.Module):
 
         cos_theta.scatter_(1, label.view(-1, 1).long(), final_target_logit)
         output = cos_theta * self.s
-        return output #, origin_cos * self.s
+        return output
