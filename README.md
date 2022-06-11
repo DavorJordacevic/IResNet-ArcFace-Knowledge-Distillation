@@ -14,7 +14,7 @@ To train a model, run `/KD_Iresnet/train_kd.sh` with the correct address.
 
 To test a model, run `mainOne.sh` with the correct model path.
 
-<img src="images/accuracy.png" alt="Accuracy" height="800"/>
+<img src="images/accuracy.png" alt="Accuracy"/>
 
 ## Credits
 
