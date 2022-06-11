@@ -1,0 +1,13 @@
+Cosine distance threshold: 0.6
+Accuracy: 0.7433333333333333
+TP: 2696
+FP: 1236
+TN: 1764
+FN: 304
+Precision: 0.6856561546286877
+Recall: 0.8986666666666666
+FMR: 0.412
+FNMR: 0.10133333333333333
+TAR: 0.8986666666666666
+TRR: 0.588
+Number of comparisons that failed (because face detection or embedding extraction failed): 0
