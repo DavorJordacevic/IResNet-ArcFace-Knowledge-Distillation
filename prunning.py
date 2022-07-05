@@ -52,11 +52,14 @@ def convert(weight, name, layer_type, proportion):
     model_to_prune.eval()
     
     model_to_prune = prune_model_l1_unstructured(model_to_prune, layer_type, proportion)
-    #model_to_prune = prune_model_ln_structured(model_to_prune, layer_type, proportion)
+    model_to_prune = prune_model_ln_structured(model_to_prune, layer_type, proportion)
     #model_to_prune = prune_model_global_unstructured(model_to_prune, layer_type, proportion)
-    
-    torch.save(model_to_prune.state_dict(), "ArcfacePrunned" + name.upper() + ".pth")
 
+    with torch.no_grad():
+        model_to_prune(x)
+
+    torch.save(model_to_prune.state_dict(), "ArcfacePrunned" + name.upper() + ".pth")
+    
     traced_script_module = torch.jit.trace(model_to_prune, x)
     traced_script_module_optimized = optimize_for_mobile(traced_script_module)
     traced_script_module_optimized._save_for_lite_interpreter("ArcfacePrunned" + name.upper() + ".ptl")
@@ -67,11 +70,11 @@ def convert(weight, name, layer_type, proportion):
         export_params=True,                          # store the trained parameter weights inside the model file
         opset_version=10,                            # the ONNX version to export the model to
         do_constant_folding=True)
-
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch ArcFace')
     parser.add_argument('--network', type=str, default='r50', help='backbone network')
     parser.add_argument('--weight', type=str, default='')
     args = parser.parse_args()
-    convert(args.weight, args.network, nn.Conv2d, 0.5)
+    convert(args.weight, args.network, nn.Conv2d, 0.3)
